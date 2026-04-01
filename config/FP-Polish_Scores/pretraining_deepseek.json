@@ -1,7 +1,7 @@
 {
 	"arch_type": "deepseek",
 	"use_pretrained_weights": false,
-	"small_deepseek": false,
+	"small_deepseek": true,
 	"data": {
 		"data_path": "antoniorv6/grandstaff-ekern",
 		"batch_size": 1,
@@ -11,7 +11,7 @@
 		"reduce_ratio": 0.5
 	},
 	"checkpoint": {
-		"dirpath": "/var/tmp/xomelka1/.cache/weights/Polish_Scores",
+		"dirpath": "/var/tmp/xomelka1/.cache/small_deepseek_weights/Polish_Scores",
 		"filename": "DeepseekDecoder_Pretraining",
 		"monitor": "val_SER"
 	}
