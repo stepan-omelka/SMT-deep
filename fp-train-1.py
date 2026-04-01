@@ -27,7 +27,8 @@ def main(config_path):
                                 out_categories=len(datamodule.train_set.w2i), padding_token=datamodule.train_set.w2i["<pad>"],
                                 in_channels=1, w2i=datamodule.train_set.w2i, i2w=datamodule.train_set.i2w,
                                 d_model=256, dim_ff=256, num_dec_layers=8, arch_type=config.arch_type,
-                                small_deepseek=getattr(config, 'small_deepseek', False))
+                                small_deepseek=getattr(config, 'small_deepseek', False),
+                                use_pretrained_weights=getattr(config, 'use_pretrained_weights', True))
 
     group = config.checkpoint.dirpath.split("/")[-1]
     name_suffix = f"-{config.arch_type.upper()}" if hasattr(config, "arch_type") else ""
