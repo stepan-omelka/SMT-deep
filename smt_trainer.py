@@ -65,7 +65,7 @@ class SMT_Trainer(L.LightningModule):
 
 
     def validation_step(self, val_batch):
-        x, _, y = val_batch
+        x, di, y = val_batch
         
         validation_loss = self.model(encoder_input=x, decoder_input=di, labels=y).loss
         predicted_sequences, _ = self.model.predict(input=x)
