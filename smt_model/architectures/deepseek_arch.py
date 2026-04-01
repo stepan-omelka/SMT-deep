@@ -3,6 +3,10 @@ import torch.nn as nn
 from transformers import PreTrainedModel
 from smt_model.configuration_smt import SMTConfig
 
+from .deepencoderv2.sam_vary_sdpa import build_sam_vit_b
+from .deepencoderv2.qwen2_d2e import build_qwen2_decoder_as_encoder
+from .deepencoderv2.build_linear import MlpProjector
+
 class Dict(dict):
     def __getattr__(self, name):
         try:
