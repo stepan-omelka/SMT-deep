@@ -6,7 +6,7 @@ import random
 import numpy as np
 import torch.nn as nn
 import lightning.pytorch as L
-
+from lovely_tensors import lovely
 from torchinfo import summary
 from eval_functions import compute_poliphony_metrics
 from smt_model import SMTConfig
@@ -67,6 +67,7 @@ class SMT_Trainer(L.LightningModule):
     def validation_step(self, val_batch):
         x, _, y = val_batch
         
+        validation_loss = self.model(encoder_input=x, decoder_input=di, labels=y).loss
         predicted_sequences, _ = self.model.predict(input=x)
         
         for i, predicted_sequence in enumerate(predicted_sequences):
@@ -93,6 +94,7 @@ class SMT_Trainer(L.LightningModule):
     
             self.preds.append(dec)
             self.grtrs.append(gt)
+        self.log("val_loss", validation_loss, prog_bar=True, batch_size=x.size(0))
 
     def on_validation_epoch_end(self, metric_name="val") -> None:
         cer, ser, ler = compute_poliphony_metrics(self.preds, self.grtrs)
