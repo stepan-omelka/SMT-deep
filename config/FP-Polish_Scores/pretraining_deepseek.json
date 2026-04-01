@@ -1,6 +1,6 @@
 {
-	"arch_type": "smt",
-	"use_pretrained_weights": true,
+	"arch_type": "deepseek",
+	"use_pretrained_weights": false,
 	"data": {
 		"data_path": "antoniorv6/grandstaff-ekern",
 		"batch_size": 1,
