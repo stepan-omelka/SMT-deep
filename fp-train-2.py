@@ -27,7 +27,8 @@ def main(config_path, starting_checkpoint):
     model_wrapper = SMT_Trainer.load_from_checkpoint(starting_checkpoint, maxh=int(max_height), maxw=int(max_width), maxlen=int(max_len),
                                 out_categories=len(datamodule.train_set.w2i), padding_token=datamodule.train_set.w2i["<pad>"],
                                 in_channels=1, w2i=datamodule.train_set.w2i, i2w=datamodule.train_set.i2w,
-                                d_model=256, dim_ff=256, num_dec_layers=8, arch_type=config.arch_type)
+                                d_model=256, dim_ff=256, num_dec_layers=8, arch_type=config.arch_type,
+                                small_deepseek=getattr(config, 'small_deepseek', False))
     model_wrapper.set_stage(datamodule.train_set.curriculum_stage_beginning)
     model_wrapper.set_stage_calculator(datamodule.train_set.get_stage_calculator())
 

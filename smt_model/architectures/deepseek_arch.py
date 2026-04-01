@@ -25,16 +25,25 @@ class DeepSeekOCR2Wrapper(PreTrainedModel):
         # Extract authentic DeepSeek components dynamically!
         from transformers import AutoModel, AutoConfig
         
-        # Determine if we should load pretrained weights from HF Hub
+        # Determine config loading strategy from SMTConfig flag
         use_pretrained = getattr(config, 'use_pretrained_weights', True)
-        
+        small_deepseek = getattr(config, 'small_deepseek', False)
+
         try:
             model_name = 'deepseek-ai/DeepSeek-OCR-2'
             if use_pretrained:
                 print(f"Loading Authentic DeepSeek-OCR-2 from HF Hub with pretrained weights...")
                 ds_model = AutoModel.from_pretrained(model_name, trust_remote_code=True, _attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16)
+            elif small_deepseek:
+                print(f"Loading DeepSeek-OCR-2 Architecture from local config (small_deepseek=True)...")
+                ds_config = AutoConfig.from_pretrained(
+                    "./smt_model/architectures/deepencoderv2/",
+                    trust_remote_code=True
+                )
+                ds_config._attn_implementation = 'flash_attention_2'
+                ds_model = AutoModel.from_config(ds_config, trust_remote_code=True, torch_dtype=torch.bfloat16)
             else:
-                print(f"Loading Authentic DeepSeek-OCR-2 Architecture (Random Weights)...")
+                print(f"Loading DeepSeek-OCR-2 Architecture from remote config (random weights)...")
                 ds_config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
                 ds_config._attn_implementation = 'flash_attention_2'
                 ds_model = AutoModel.from_config(ds_config, trust_remote_code=True, torch_dtype=torch.bfloat16)
