@@ -186,22 +186,40 @@ class DeepSeekOCR2Wrapper(PreTrainedModel):
         has_eos = torch.zeros(b, dtype=torch.bool, device=input.device)
         eos_id = self.w2i['<eos>']
 
-        # Simplified step-by-step autoregression without full KV caching for equivalence to previous SMT structure
-        # (Could be significantly optimized with huggingface GenerationMixin later if inference speed is a priority)
+        # -------------------------------------------------------------
+        # FAST AUTOREGRESSIVE GENERATION WITH KV CACHING & SEP TOKEN
+        # -------------------------------------------------------------
         outputs = None
-        for i in range(self.maxlen - predicted_sequence.size(1)):
-            text_embeds = self.decoder.model.embed_tokens(predicted_sequence)
-            inputs_embeds = torch.cat([encoder_features, text_embeds], dim=1)
+        past_key_values = None
+        
+        # 1. Initial Prompt: Visual tokens + Separator + <bos>
+        sep = self.view_separator[None, None, :].expand(b, 1, self.n_embed)
+        bos_embeds = self.decoder.model.embed_tokens(predicted_sequence)
+        
+        inputs_embeds = torch.cat([encoder_features, sep, bos_embeds], dim=1)
+
+        # We will loop for the remaining maxlen tokens
+        for i in range(self.maxlen - 1):
+            outputs = self.decoder(
+                inputs_embeds=inputs_embeds, 
+                past_key_values=past_key_values,
+                use_cache=True,
+                output_attentions=return_weights
+            )
             
-            outputs = self.decoder(inputs_embeds=inputs_embeds, output_attentions=return_weights)
+            past_key_values = outputs.past_key_values
             
-            # The next token prediction is the last predicted logit in the sequence
+            # The next token prediction is the logit of the very last token processed
             predicted_tokens = torch.argmax(outputs.logits[:, -1, :], dim=-1, keepdim=True)
             predicted_sequence = torch.cat([predicted_sequence, predicted_tokens], dim=1)
             
             has_eos |= (predicted_tokens.squeeze(1) == eos_id)
             if has_eos.all():
                 break
+                
+            # 2. For the next iteration, we ONLY pass the single newest token!
+            # The massive image computation is safely avoided via past_key_values.
+            inputs_embeds = self.decoder.model.embed_tokens(predicted_tokens)
 
         text_sequences = []
         for b_idx in range(b):
