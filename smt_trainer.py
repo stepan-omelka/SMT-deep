@@ -6,20 +6,21 @@ import random
 import numpy as np
 import torch.nn as nn
 import lightning.pytorch as L
-
+from lovely_tensors import lovely
 from torchinfo import summary
 from eval_functions import compute_poliphony_metrics
 from smt_model import SMTConfig
 from smt_model import build_model
 
 class SMT_Trainer(L.LightningModule):
-    def __init__(self, maxh, maxw, maxlen, out_categories, padding_token, in_channels, w2i, i2w, d_model=256, dim_ff=256, num_dec_layers=8, arch_type="smt"):
+    def __init__(self, maxh, maxw, maxlen, out_categories, padding_token, in_channels, w2i, i2w, d_model=256, dim_ff=256, num_dec_layers=8, arch_type="smt", small_deepseek=False, use_pretrained_weights=True):
         super().__init__()
         self.config = SMTConfig(maxh=maxh, maxw=maxw, maxlen=maxlen, out_categories=out_categories,
                            padding_token=padding_token, in_channels=in_channels,
                            w2i=w2i, i2w=i2w,
                            d_model=d_model, dim_ff=dim_ff, attn_heads=4, num_dec_layers=num_dec_layers,
-                           use_flash_attn=True)
+                           use_flash_attn=True, small_deepseek=small_deepseek,
+                           use_pretrained_weights=use_pretrained_weights)
         self.model = build_model(self.config, arch_type=arch_type)
         self.padding_token = padding_token
 
@@ -65,8 +66,9 @@ class SMT_Trainer(L.LightningModule):
 
 
     def validation_step(self, val_batch):
-        x, _, y = val_batch
+        x, di, y = val_batch
         
+        validation_loss = self.model(encoder_input=x, decoder_input=di, labels=y).loss
         predicted_sequences, _ = self.model.predict(input=x)
         
         for i, predicted_sequence in enumerate(predicted_sequences):
@@ -93,6 +95,7 @@ class SMT_Trainer(L.LightningModule):
     
             self.preds.append(dec)
             self.grtrs.append(gt)
+        self.log("val_loss", validation_loss, prog_bar=True, batch_size=x.size(0))
 
     def on_validation_epoch_end(self, metric_name="val") -> None:
         cer, ser, ler = compute_poliphony_metrics(self.preds, self.grtrs)

@@ -106,6 +106,8 @@ class ExperimentConfig:
     data: Data
     checkpoint: Checkpoint
     arch_type: str = "smt"
+    small_deepseek: bool = False
+    use_pretrained_weights: bool = True
 
     @staticmethod
     def from_dict(obj: Any) -> 'ExperimentConfig':
@@ -114,14 +116,18 @@ class ExperimentConfig:
         data = Data.from_dict(obj.get("data"))
         checkpoint = Checkpoint.from_dict(obj.get("checkpoint"))
         arch_type = from_str(obj.get("arch_type")) if "arch_type" in obj else "smt"
+        small_deepseek = from_bool(obj.get("small_deepseek")) if "small_deepseek" in obj else False
+        use_pretrained_weights = from_bool(obj.get("use_pretrained_weights")) if "use_pretrained_weights" in obj else True
 
-        return ExperimentConfig(data, checkpoint, arch_type)
+        return ExperimentConfig(data, checkpoint, arch_type, small_deepseek, use_pretrained_weights)
 
     def to_dict(self) -> dict:
         return {
                 "data": to_class(Data, self.data),
                 "checkpoint": to_class(Checkpoint, self.checkpoint),
-                "arch_type": from_str(self.arch_type)
+                "arch_type": from_str(self.arch_type),
+                "small_deepseek": from_bool(self.small_deepseek),
+                "use_pretrained_weights": from_bool(self.use_pretrained_weights),
                 }
 
 

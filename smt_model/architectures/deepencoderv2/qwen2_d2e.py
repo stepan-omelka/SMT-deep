@@ -254,27 +254,13 @@ class Qwen2Decoder2Encoder(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x  = x.flatten(2).transpose(1, 2)
 
-        bs, n_query, hidden_dim = x.shape
-
-        if not hasattr(self, 'dynamic_query'):
-            self.dynamic_query = nn.Embedding(n_query, hidden_dim).to(x.device, x.dtype)
+        bs, n_query, _ = x.shape
 
         if n_query == 144:
             param_img = self.query_768.weight
         elif n_query == 256:
             param_img = self.query_1024.weight
-        else:
-            # Fallback for dynamic query sizes like 8x8=64 or others instead of failing
-            
-            # Since nn.Embedding weights are not dynamically re-sizable, we handle this branch
-            # dynamically on the correct device/dtype if it size flips:
-            if self.dynamic_query.num_embeddings != n_query:
-                self.dynamic_query = nn.Embedding(n_query, hidden_dim).to(x.device, x.dtype)
-                
-            param_img = self.dynamic_query.weight
 
-        # Ensure correct type
-        param_img = param_img.to(x.dtype)
         batch_query_imgs = param_img.unsqueeze(0).expand(
             bs, -1, -1
         )  # (batch_size, num_queries, hidden_size)

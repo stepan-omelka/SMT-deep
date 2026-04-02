@@ -26,7 +26,9 @@ def main(config_path):
     model_wrapper = SMT_Trainer(maxh=int(max_height), maxw=int(max_width), maxlen=int(max_len),
                                 out_categories=len(datamodule.train_set.w2i), padding_token=datamodule.train_set.w2i["<pad>"],
                                 in_channels=1, w2i=datamodule.train_set.w2i, i2w=datamodule.train_set.i2w,
-                                d_model=256, dim_ff=256, num_dec_layers=8, arch_type=config.arch_type)
+                                d_model=256, dim_ff=256, num_dec_layers=8, arch_type=config.arch_type,
+                                small_deepseek=getattr(config, 'small_deepseek', False),
+                                use_pretrained_weights=getattr(config, 'use_pretrained_weights', True))
 
     group = config.checkpoint.dirpath.split("/")[-1]
     name_suffix = f"-{config.arch_type.upper()}" if hasattr(config, "arch_type") else ""
@@ -39,6 +41,7 @@ def main(config_path):
                                    save_top_k=config.checkpoint.save_top_k, verbose=config.checkpoint.verbose)
 
     trainer = Trainer(max_epochs=10000,
+                      num_sanity_val_steps=0,
                       check_val_every_n_epoch=1,
                       gradient_clip_val=1.0,
                       logger=wandb_logger, callbacks=[checkpointer, early_stopping], precision='bf16-mixed')

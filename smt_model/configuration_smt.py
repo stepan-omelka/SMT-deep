@@ -6,7 +6,8 @@ class SMTConfig(PretrainedConfig):
     def __init__(self, maxh=3508, maxw=2480, maxlen=1512, out_categories=2512, padding_token=0, 
                  in_channels=1, w2i={}, i2w={}, out_dir="out_smt", 
                  d_model=256, dim_ff=256, num_dec_layers=8, attn_heads=4,
-                 use_flash_attn=False, _attn_implementation_internal=None, **kwargs):
+                 use_flash_attn=True, small_deepseek=False, use_pretrained_weights=True,
+                 _attn_implementation_internal=None, **kwargs):
         self.architectures = ["SMT"]
         self.maxh = maxh
         self.maxw = maxw
@@ -22,4 +23,6 @@ class SMTConfig(PretrainedConfig):
         self.num_attn_heads = attn_heads
         self.num_dec_layers = num_dec_layers
         self.use_flash_attn = use_flash_attn
+        self.small_deepseek = small_deepseek
+        self.use_pretrained_weights = use_pretrained_weights
         self._attn_implementation_internal = _attn_implementation_internal
