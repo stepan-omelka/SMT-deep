@@ -7,7 +7,7 @@ class SMTConfig(PretrainedConfig):
                  in_channels=1, w2i={}, i2w={}, out_dir="out_smt", 
                  d_model=256, dim_ff=256, num_dec_layers=8, attn_heads=4,
                  use_flash_attn=True, small_deepseek=False, use_pretrained_weights=True,
-                 _attn_implementation_internal=None, **kwargs):
+                 _attn_implementation_internal=None, _experts_implementation_internal=None, **kwargs):
         self.architectures = ["SMT"]
         self.maxh = maxh
         self.maxw = maxw
@@ -26,3 +26,4 @@ class SMTConfig(PretrainedConfig):
         self.small_deepseek = small_deepseek
         self.use_pretrained_weights = use_pretrained_weights
         self._attn_implementation_internal = _attn_implementation_internal
+        self._experts_implementation_internal = _experts_implementation_internal
