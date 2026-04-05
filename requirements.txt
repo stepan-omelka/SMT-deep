@@ -25,7 +25,7 @@ wonderwords
 
 # DeepSeek Dependencies
 addict
-tokenizers==0.20.3
+tokenizers>=0.21.0
 PyMuPDF
 img2pdf
 einops
