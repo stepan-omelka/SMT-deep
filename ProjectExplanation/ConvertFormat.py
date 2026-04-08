@@ -17,176 +17,17 @@ This module provides a function to perform this conversion, enabling the creatio
 of new datasets compatible with the PRAIG tokenisation pipeline (kern/ekern/bekern).
 """
 
-import re
-
-
-# Characters that are graphical/performance modifiers (separated by ·)
-# These appear AFTER the note body and describe how the note is rendered,
-# not what pitch/duration it represents.
-BEAM_CHARS = {'L', 'J', 'K'}        # beam start, beam end, partial beam
-TIE_CHARS = {'[', ']', '_'}         # tie start, tie end, tie continue  
-GRACE_TOKENS = {'q', 'qq'}          # grace note, double grace note
-MODIFIER_CHARS = {'k', 'X', '<', '>'}  # staccato, editorial, cross-staff
-
-
-def kern_token_to_annotated(token: str) -> str:
+def _join_annotated(body_parts: list[str], mod_parts: list[str]) -> str:
     """
-    Convert a single standard **kern note token into the PRAIG-annotated format.
-    
-    Structural tokens (barlines, interpretations, rests, null tokens) are left unchanged
-    except that rests get the @ delimiter between duration and 'r'.
-    
+    Join parsed note body parts and modifiers into the final annotated string.
+
     Args:
-        token: A single **kern token, e.g. '8e-JL', '4.f#', '16r', '*clefG2', '='
-        
+        body_parts: Components of the note body.
+        mod_parts: Components of the graphical modifiers.
+
     Returns:
-        The annotated token, e.g. '8@e@-·J·L', '4@.@f@#', '16@r', '*clefG2', '='
+        The fully annotated string joined by @ and ·.
     """
-    # Structural tokens: pass through unchanged
-    if token.startswith('*') or token.startswith('=') or token == '.':
-        return token
-    
-    # Parse the token character by character
-    i = 0
-    n = len(token)
-    
-    if n == 0:
-        return token
-    
-    # ── Phase 1: Extract the note body components ──
-    # Note body = duration [+ dot] [+ pitch + accidental]
-    # Everything else is a graphical modifier.
-    
-    parts_body = []     # Components joined by @
-    parts_mods = []     # Graphical modifiers joined by ·
-    
-    # 1a. Duration: leading digits
-    duration = ''
-    while i < n and token[i].isdigit():
-        duration += token[i]
-        i += 1
-    
-    if not duration:
-        # No duration means this is a grace note token (just pitch, e.g. 'e-·q')
-        # or something unusual. Parse pitch+accidental then modifiers.
-        pitch_acc = ''
-        while i < n and token[i] not in BEAM_CHARS and token[i] not in TIE_CHARS \
-                and token[i] not in MODIFIER_CHARS and token[i] not in GRACE_TOKENS \
-                and token[i] != '·' and token[i] != '@':
-            pitch_acc += token[i]
-            i += 1
-        
-        if pitch_acc:
-            # Split pitch from accidentals
-            body_parts = _split_pitch_accidental(pitch_acc)
-            parts_body.extend(body_parts)
-        
-        # Rest is modifiers
-        while i < n:
-            mod = ''
-            if token[i] == '·':
-                i += 1
-                continue
-            while i < n and token[i] != '·':
-                mod += token[i]
-                i += 1
-            if mod:
-                parts_mods.append(mod)
-        
-        return _join_annotated(parts_body, parts_mods)
-    
-    parts_body.append(duration)
-    
-    # 1b. Dot(s) for dotted rhythms: '.' immediately after duration
-    dots = ''
-    while i < n and token[i] == '.':
-        dots += token[i]
-        i += 1
-    
-    if dots:
-        parts_body.append(dots)
-    
-    # 1c. Check for rest
-    if i < n and token[i] == 'r':
-        parts_body.append('r')
-        i += 1
-        # Rests can have modifiers too (rare but possible)
-        while i < n:
-            mod = ''
-            if token[i] == '·':
-                i += 1
-                continue
-            while i < n and token[i] != '·':
-                mod += token[i]
-                i += 1
-            if mod:
-                parts_mods.append(mod)
-        return _join_annotated(parts_body, parts_mods)
-    
-    # 1d. Pitch: one or more letters [A-Ga-g]
-    pitch = ''
-    while i < n and token[i].isalpha() and token[i].lower() in 'abcdefg':
-        pitch += token[i]
-        i += 1
-    
-    if pitch:
-        # 1e. Accidental: # or - (possibly repeated for double)
-        accidental = ''
-        while i < n and token[i] in '#-n':
-            accidental += token[i]
-            i += 1
-        
-        # Pitch and accidental go together, then accidental is separate
-        if accidental:
-            parts_body.append(pitch)
-            parts_body.append(accidental)
-        else:
-            parts_body.append(pitch)
-    
-    # ── Phase 2: Everything remaining is graphical modifiers ──
-    while i < n:
-        mod = ''
-        if token[i] == '·':
-            i += 1
-            continue
-        # Collect a modifier group
-        while i < n and token[i] != '·':
-            mod += token[i]
-            i += 1
-        if mod:
-            parts_mods.append(mod)
-    
-    return _join_annotated(parts_body, parts_mods)
-
-
-def _split_pitch_accidental(s: str) -> list:
-    """Split a pitch+accidental string like 'e-' into ['e', '-'] or 'f#' into ['f', '#']."""
-    parts = []
-    i = 0
-    pitch = ''
-    while i < len(s) and s[i].isalpha() and s[i].lower() in 'abcdefg':
-        pitch += s[i]
-        i += 1
-    if pitch:
-        parts.append(pitch)
-    
-    accidental = ''
-    while i < len(s) and s[i] in '#-n':
-        accidental += s[i]
-        i += 1
-    if accidental:
-        parts.append(accidental)
-    
-    # Anything remaining
-    rest = s[i:]
-    if rest:
-        parts.append(rest)
-    
-    return parts
-
-
-def _join_annotated(body_parts: list, mod_parts: list) -> str:
-    """Join body parts with @ and modifier parts with ·, then combine."""
     body = '@'.join(body_parts) if body_parts else ''
     mods = '·'.join(mod_parts) if mod_parts else ''
     
@@ -200,14 +41,20 @@ def _join_annotated(body_parts: list, mod_parts: list) -> str:
         return ''
 
 
-def _parse_modifier_chars(s: str) -> list:
+def _parse_modifier_chars(s: str) -> list[str]:
     """
-    Parse the modifier portion of a kern token into individual modifier groups.
+    Parse the modifier string into individual graphical modifier groups.
     
     In standard **kern, modifiers are concatenated: 'JL' means beam-end then beam-start.
     Each modifier character or known multi-char sequence becomes its own group.
+
+    Args:
+        s: Raw modifier string portion.
+        
+    Returns:
+        List of separated modifier characters/blobs.
     """
-    mods = []
+    mods: list[str] = []
     i = 0
     while i < len(s):
         ch = s[i]
@@ -240,7 +87,7 @@ def kern_token_to_annotated_full(token: str) -> str:
     if n == 0:
         return token
     
-    parts_body = []
+    parts_body: list[str] = []
     
     # Duration digits
     duration = ''
@@ -248,7 +95,6 @@ def kern_token_to_annotated_full(token: str) -> str:
         duration += token[i]
         i += 1
     
-    has_duration = bool(duration)
     if duration:
         parts_body.append(duration)
     
@@ -285,12 +131,7 @@ def kern_token_to_annotated_full(token: str) -> str:
     if accidental:
         parts_body.append(accidental)
     
-    # Special editorial marks that are part of the note body (e.g. X for cautionary)
-    # In the dataset: 4@f@-X·[ means X is a modifier, not body
-    # But 8@G@-X·L means the same pattern
-    # Looking at the data: X appears after accidentals and before · modifiers
-    # It seems X is treated as a modifier
-    
+
     # Everything remaining is modifiers
     remaining = token[i:]
     mod_list = _parse_modifier_chars(remaining) if remaining else []
@@ -313,17 +154,14 @@ def convert_kern_line_to_annotated(line: str) -> str:
     """
     # Split by tabs first (spine boundaries)
     spines = line.split('\t')
-    converted_spines = []
+    converted_spines: list[str] = []
     
     for spine in spines:
         # Within a spine, tokens can be space-separated (chords)
         tokens = spine.split(' ')
-        converted_tokens = []
-        for token in tokens:
-            if token:
-                converted_tokens.append(kern_token_to_annotated_full(token))
-            else:
-                converted_tokens.append(token)
+        converted_tokens = [
+            kern_token_to_annotated_full(t) if t else t for t in tokens
+        ]
         converted_spines.append(' '.join(converted_tokens))
     
     return '\t'.join(converted_spines)
@@ -340,7 +178,7 @@ def convert_kern_to_annotated(kern_text: str) -> str:
         The same score with @ and · delimiters inserted
     """
     lines = kern_text.split('\n')
-    converted_lines = []
+    converted_lines: list[str] = []
     
     for line in lines:
         # Convert the exclusive interpretation headers
