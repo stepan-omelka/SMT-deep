@@ -22,11 +22,10 @@ def _join_annotated(body_parts: list[str], mod_parts: list[str]) -> str:
     Join parsed note body parts and modifiers into the final annotated string.
 
     Args:
-        body_parts: Components of the note body.
-        mod_parts: Components of the graphical modifiers.
+        @ body_parts: Components of the note body.
+        · mod_parts: Components of the graphical modifiers.
 
-    Returns:
-        The fully annotated string joined by @ and ·.
+    Returns: The fully annotated string joined by @ and ·.
     """
     body = '@'.join(body_parts) if body_parts else ''
     mods = '·'.join(mod_parts) if mod_parts else ''
@@ -48,11 +47,9 @@ def _parse_modifier_chars(s: str) -> list[str]:
     In standard **kern, modifiers are concatenated: 'JL' means beam-end then beam-start.
     Each modifier character or known multi-char sequence becomes its own group.
 
-    Args:
-        s: Raw modifier string portion.
+    Args: s: Raw modifier string portion.
         
-    Returns:
-        List of separated modifier characters/blobs.
+    Returns: List of separated modifier characters/blobs.
     """
     mods: list[str] = []
     i = 0
@@ -68,7 +65,7 @@ def _parse_modifier_chars(s: str) -> list[str]:
     return mods
 
 
-def kern_token_to_annotated_full(token: str) -> str:
+def _kern_token_to_annotated_full(token: str) -> str:
     """
     Convert a standard **kern token, splitting modifier characters individually.
     
@@ -139,7 +136,7 @@ def kern_token_to_annotated_full(token: str) -> str:
     return _join_annotated(parts_body, mod_list)
 
 
-def convert_kern_line_to_annotated(line: str) -> str:
+def _convert_kern_line_to_annotated(line: str) -> str:
     """
     Convert a full line of standard **kern into the PRAIG-annotated format.
     
@@ -160,7 +157,7 @@ def convert_kern_line_to_annotated(line: str) -> str:
         # Within a spine, tokens can be space-separated (chords)
         tokens = spine.split(' ')
         converted_tokens = [
-            kern_token_to_annotated_full(t) if t else t for t in tokens
+            _kern_token_to_annotated_full(t) if t else t for t in tokens
         ]
         converted_spines.append(' '.join(converted_tokens))
     
@@ -169,23 +166,18 @@ def convert_kern_line_to_annotated(line: str) -> str:
 
 def convert_kern_to_annotated(kern_text: str) -> str:
     """
-    Convert an entire **kern score into the PRAIG-annotated format.
-    
-    Args:
-        kern_text: Full **kern file content as a string
-        
-    Returns:
-        The same score with @ and · delimiters inserted
+    Convert an entire **kern score into the PRAIG-annotated format. (add the @ and · delimiters)
+    Args: kern_text: Full **kern file content as a string
+    Returns: The same score with @ and · delimiters inserted
     """
     lines = kern_text.split('\n')
     converted_lines: list[str] = []
     
     for line in lines:
-        # Convert the exclusive interpretation headers
         if line.strip().startswith('**kern'):
             converted_lines.append(line.replace('**kern', '**ekern'))
         else:
-            converted_lines.append(convert_kern_line_to_annotated(line))
+            converted_lines.append(_convert_kern_line_to_annotated(line))
     
     return '\n'.join(converted_lines)
 
@@ -197,114 +189,114 @@ if __name__ == "__main__":
     # ── Individual token conversion tests ──
     
     # Simple notes: duration@pitch
-    assert kern_token_to_annotated_full("4c") == "4@c", \
-        f"Expected '4@c', got '{kern_token_to_annotated_full('4c')}'"
-    assert kern_token_to_annotated_full("8E") == "8@E", \
-        f"Expected '8@E', got '{kern_token_to_annotated_full('8E')}'"
-    assert kern_token_to_annotated_full("16dd") == "16@dd", \
-        f"Expected '16@dd', got '{kern_token_to_annotated_full('16dd')}'"
-    assert kern_token_to_annotated_full("2GG") == "2@GG", \
-        f"Expected '2@GG', got '{kern_token_to_annotated_full('2GG')}'"
+    assert _kern_token_to_annotated_full("4c") == "4@c", \
+        f"Expected '4@c', got '{_kern_token_to_annotated_full('4c')}'"
+    assert _kern_token_to_annotated_full("8E") == "8@E", \
+        f"Expected '8@E', got '{_kern_token_to_annotated_full('8E')}'"
+    assert _kern_token_to_annotated_full("16dd") == "16@dd", \
+        f"Expected '16@dd', got '{_kern_token_to_annotated_full('16dd')}'"
+    assert _kern_token_to_annotated_full("2GG") == "2@GG", \
+        f"Expected '2@GG', got '{_kern_token_to_annotated_full('2GG')}'"
     
     # Notes with accidentals: duration@pitch@accidental
-    assert kern_token_to_annotated_full("4F#") == "4@F@#", \
-        f"Expected '4@F@#', got '{kern_token_to_annotated_full('4F#')}'"
-    assert kern_token_to_annotated_full("8e-") == "8@e@-", \
-        f"Expected '8@e@-', got '{kern_token_to_annotated_full('8e-')}'"
-    assert kern_token_to_annotated_full("16GG#") == "16@GG@#", \
-        f"Expected '16@GG@#', got '{kern_token_to_annotated_full('16GG#')}'"
-    assert kern_token_to_annotated_full("8bb-") == "8@bb@-", \
-        f"Expected '8@bb@-', got '{kern_token_to_annotated_full('8bb-')}'"
+    assert _kern_token_to_annotated_full("4F#") == "4@F@#", \
+        f"Expected '4@F@#', got '{_kern_token_to_annotated_full('4F#')}'"
+    assert _kern_token_to_annotated_full("8e-") == "8@e@-", \
+        f"Expected '8@e@-', got '{_kern_token_to_annotated_full('8e-')}'"
+    assert _kern_token_to_annotated_full("16GG#") == "16@GG@#", \
+        f"Expected '16@GG@#', got '{_kern_token_to_annotated_full('16GG#')}'"
+    assert _kern_token_to_annotated_full("8bb-") == "8@bb@-", \
+        f"Expected '8@bb@-', got '{_kern_token_to_annotated_full('8bb-')}'"
     
     # Double accidentals
-    assert kern_token_to_annotated_full("4c##") == "4@c@##", \
-        f"Expected '4@c@##', got '{kern_token_to_annotated_full('4c##')}'"
-    assert kern_token_to_annotated_full("8f--") == "8@f@--", \
-        f"Expected '8@f@--', got '{kern_token_to_annotated_full('8f--')}'"
+    assert _kern_token_to_annotated_full("4c##") == "4@c@##", \
+        f"Expected '4@c@##', got '{_kern_token_to_annotated_full('4c##')}'"
+    assert _kern_token_to_annotated_full("8f--") == "8@f@--", \
+        f"Expected '8@f@--', got '{_kern_token_to_annotated_full('8f--')}'"
     
     # Dotted notes: duration@.@pitch
-    assert kern_token_to_annotated_full("4.c") == "4@.@c", \
-        f"Expected '4@.@c', got '{kern_token_to_annotated_full('4.c')}'"
-    assert kern_token_to_annotated_full("2.BB-") == "2@.@BB@-", \
-        f"Expected '2@.@BB@-', got '{kern_token_to_annotated_full('2.BB-')}'"
-    assert kern_token_to_annotated_full("8.dd#") == "8@.@dd@#", \
-        f"Expected '8@.@dd@#', got '{kern_token_to_annotated_full('8.dd#')}'"
+    assert _kern_token_to_annotated_full("4.c") == "4@.@c", \
+        f"Expected '4@.@c', got '{_kern_token_to_annotated_full('4.c')}'"
+    assert _kern_token_to_annotated_full("2.BB-") == "2@.@BB@-", \
+        f"Expected '2@.@BB@-', got '{_kern_token_to_annotated_full('2.BB-')}'"
+    assert _kern_token_to_annotated_full("8.dd#") == "8@.@dd@#", \
+        f"Expected '8@.@dd@#', got '{_kern_token_to_annotated_full('8.dd#')}'"
     
     # Notes with beaming modifiers: ·L, ·J
-    assert kern_token_to_annotated_full("8eL") == "8@e·L", \
-        f"Expected '8@e·L', got '{kern_token_to_annotated_full('8eL')}'"
-    assert kern_token_to_annotated_full("8e-J") == "8@e@-·J", \
-        f"Expected '8@e@-·J', got '{kern_token_to_annotated_full('8e-J')}'"
-    assert kern_token_to_annotated_full("16f#L") == "16@f@#·L", \
-        f"Expected '16@f@#·L', got '{kern_token_to_annotated_full('16f#L')}'"
+    assert _kern_token_to_annotated_full("8eL") == "8@e·L", \
+        f"Expected '8@e·L', got '{_kern_token_to_annotated_full('8eL')}'"
+    assert _kern_token_to_annotated_full("8e-J") == "8@e@-·J", \
+        f"Expected '8@e@-·J', got '{_kern_token_to_annotated_full('8e-J')}'"
+    assert _kern_token_to_annotated_full("16f#L") == "16@f@#·L", \
+        f"Expected '16@f@#·L', got '{_kern_token_to_annotated_full('16f#L')}'"
     
     # Multiple modifiers: ·J·L, ·L·], etc.
-    assert kern_token_to_annotated_full("8e-JL") == "8@e@-·J·L", \
-        f"Expected '8@e@-·J·L', got '{kern_token_to_annotated_full('8e-JL')}'"
-    assert kern_token_to_annotated_full("16B-L]") == "16@B@-·L·]", \
-        f"Expected '16@B@-·L·]', got '{kern_token_to_annotated_full('16B-L]')}'"
+    assert _kern_token_to_annotated_full("8e-JL") == "8@e@-·J·L", \
+        f"Expected '8@e@-·J·L', got '{_kern_token_to_annotated_full('8e-JL')}'"
+    assert _kern_token_to_annotated_full("16B-L]") == "16@B@-·L·]", \
+        f"Expected '16@B@-·L·]', got '{_kern_token_to_annotated_full('16B-L]')}'"
     
     # Tie markers
-    assert kern_token_to_annotated_full("4c[") == "4@c·[", \
-        f"Expected '4@c·[', got '{kern_token_to_annotated_full('4c[')}'"
-    assert kern_token_to_annotated_full("4c]") == "4@c·]", \
-        f"Expected '4@c·]', got '{kern_token_to_annotated_full('4c]')}'"
-    assert kern_token_to_annotated_full("2.C[") == "2@.@C·[", \
-        f"Expected '2@.@C·[', got '{kern_token_to_annotated_full('2.C[')}'"
+    assert _kern_token_to_annotated_full("4c[") == "4@c·[", \
+        f"Expected '4@c·[', got '{_kern_token_to_annotated_full('4c[')}'"
+    assert _kern_token_to_annotated_full("4c]") == "4@c·]", \
+        f"Expected '4@c·]', got '{_kern_token_to_annotated_full('4c]')}'"
+    assert _kern_token_to_annotated_full("2.C[") == "2@.@C·[", \
+        f"Expected '2@.@C·[', got '{_kern_token_to_annotated_full('2.C[')}'"
     
     # Rests
-    assert kern_token_to_annotated_full("8r") == "8@r", \
-        f"Expected '8@r', got '{kern_token_to_annotated_full('8r')}'"
-    assert kern_token_to_annotated_full("4r") == "4@r", \
-        f"Expected '4@r', got '{kern_token_to_annotated_full('4r')}'"
-    assert kern_token_to_annotated_full("2.r") == "2@.@r", \
-        f"Expected '2@.@r', got '{kern_token_to_annotated_full('2.r')}'"
+    assert _kern_token_to_annotated_full("8r") == "8@r", \
+        f"Expected '8@r', got '{_kern_token_to_annotated_full('8r')}'"
+    assert _kern_token_to_annotated_full("4r") == "4@r", \
+        f"Expected '4@r', got '{_kern_token_to_annotated_full('4r')}'"
+    assert _kern_token_to_annotated_full("2.r") == "2@.@r", \
+        f"Expected '2@.@r', got '{_kern_token_to_annotated_full('2.r')}'"
     
     # Grace notes (no duration, just pitch + q modifier)
-    assert kern_token_to_annotated_full("eq") == "e·q", \
-        f"Expected 'e·q', got '{kern_token_to_annotated_full('eq')}'"
-    assert kern_token_to_annotated_full("e-q") == "e@-·q", \
-        f"Expected 'e@-·q', got '{kern_token_to_annotated_full('e-q')}'"
+    assert _kern_token_to_annotated_full("eq") == "e·q", \
+        f"Expected 'e·q', got '{_kern_token_to_annotated_full('eq')}'"
+    assert _kern_token_to_annotated_full("e-q") == "e@-·q", \
+        f"Expected 'e@-·q', got '{_kern_token_to_annotated_full('e-q')}'"
     
     # Structural tokens pass through unchanged
-    assert kern_token_to_annotated_full("*clefG2") == "*clefG2"
-    assert kern_token_to_annotated_full("*clefF4") == "*clefF4"
-    assert kern_token_to_annotated_full("*k[f#c#]") == "*k[f#c#]"
-    assert kern_token_to_annotated_full("*M3/4") == "*M3/4"
-    assert kern_token_to_annotated_full("*-") == "*-"
-    assert kern_token_to_annotated_full("*met(C)") == "*met(C)"
-    assert kern_token_to_annotated_full("=") == "="
-    assert kern_token_to_annotated_full("=15") == "=15"
-    assert kern_token_to_annotated_full(".") == "."
+    assert _kern_token_to_annotated_full("*clefG2") == "*clefG2"
+    assert _kern_token_to_annotated_full("*clefF4") == "*clefF4"
+    assert _kern_token_to_annotated_full("*k[f#c#]") == "*k[f#c#]"
+    assert _kern_token_to_annotated_full("*M3/4") == "*M3/4"
+    assert _kern_token_to_annotated_full("*-") == "*-"
+    assert _kern_token_to_annotated_full("*met(C)") == "*met(C)"
+    assert _kern_token_to_annotated_full("=") == "="
+    assert _kern_token_to_annotated_full("=15") == "=15"
+    assert _kern_token_to_annotated_full(".") == "."
     
     # Editorial cautionary mark X (appears after accidental, treated as modifier)
-    assert kern_token_to_annotated_full("4f-X[") == "4@f@-·X·[", \
-        f"Expected '4@f@-·X·[', got '{kern_token_to_annotated_full('4f-X[')}'"
-    assert kern_token_to_annotated_full("4B-X[") == "4@B@-·X·[", \
-        f"Expected '4@B@-·X·[', got '{kern_token_to_annotated_full('4B-X[')}'"
+    assert _kern_token_to_annotated_full("4f-X[") == "4@f@-·X·[", \
+        f"Expected '4@f@-·X·[', got '{_kern_token_to_annotated_full('4f-X[')}'"
+    assert _kern_token_to_annotated_full("4B-X[") == "4@B@-·X·[", \
+        f"Expected '4@B@-·X·[', got '{_kern_token_to_annotated_full('4B-X[')}'"
     
     # Partial beam (K modifier)
-    assert kern_token_to_annotated_full("16ddKL") == "16@dd·K·L", \
-        f"Expected '16@dd·K·L', got '{kern_token_to_annotated_full('16ddKL')}'"
+    assert _kern_token_to_annotated_full("16ddKL") == "16@dd·K·L", \
+        f"Expected '16@dd·K·L', got '{_kern_token_to_annotated_full('16ddKL')}'"
     
     # Staccato (k modifier) after beam
-    assert kern_token_to_annotated_full("16dd#Jk") == "16@dd@#·J·k", \
-        f"Expected '16@dd@#·J·k', got '{kern_token_to_annotated_full('16dd#Jk')}'"
+    assert _kern_token_to_annotated_full("16dd#Jk") == "16@dd@#·J·k", \
+        f"Expected '16@dd@#·J·k', got '{_kern_token_to_annotated_full('16dd#Jk')}'"
     
     # ── Full line conversion tests ──
     
     line1 = "4c\t4E"
-    assert convert_kern_line_to_annotated(line1) == "4@c\t4@E", \
-        f"Line test 1 failed: '{convert_kern_line_to_annotated(line1)}'"
+    assert _convert_kern_line_to_annotated(line1) == "4@c\t4@E", \
+        f"Line test 1 failed: '{_convert_kern_line_to_annotated(line1)}'"
     
     line2 = "8eL\t8g#J"
-    assert convert_kern_line_to_annotated(line2) == "8@e·L\t8@g@#·J", \
-        f"Line test 2 failed: '{convert_kern_line_to_annotated(line2)}'"
+    assert _convert_kern_line_to_annotated(line2) == "8@e·L\t8@g@#·J", \
+        f"Line test 2 failed: '{_convert_kern_line_to_annotated(line2)}'"
     
     # Chord (space-separated within a spine)
     line3 = "4c 4e 4g\t4E 4G"
-    assert convert_kern_line_to_annotated(line3) == "4@c 4@e 4@g\t4@E 4@G", \
-        f"Line test 3 failed: '{convert_kern_line_to_annotated(line3)}'"
+    assert _convert_kern_line_to_annotated(line3) == "4@c 4@e 4@g\t4@E 4@G", \
+        f"Line test 3 failed: '{_convert_kern_line_to_annotated(line3)}'"
     
     # ── Full score conversion test ──
     
@@ -481,7 +473,7 @@ if __name__ == "__main__":
     
     failures = 0
     for kern_input, expected_output in real_dataset_pairs:
-        actual = kern_token_to_annotated_full(kern_input)
+        actual = _kern_token_to_annotated_full(kern_input)
         if actual != expected_output:
             print(f"  FAIL: '{kern_input}' → '{actual}' (expected '{expected_output}')")
             failures += 1
