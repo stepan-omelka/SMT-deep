@@ -2,7 +2,7 @@
 	"arch_type": "qwen",
 	"data": {
 		"data_path": "antoniorv6/grandstaff-ekern",
-		"batch_size": 32,
+		"batch_size": 64,
 		"vocab_name": "Polish_Scores_BeKern",
 		"num_workers": 20,
 		"krn_format": "bekern",
