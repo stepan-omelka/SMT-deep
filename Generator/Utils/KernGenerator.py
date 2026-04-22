@@ -23,6 +23,7 @@ class KernGenerator:
     Provides complete control over sequence length (via measures) and guarantees 
     ability to cover the entire requested token space over sufficient generations.
     """
+    RESET_TRACKING_AFTER_N_GENERATED_MEASURES_AND_METHOD_COMPLETION: int = 4000
 
     # Generation Probabilities & Constants
     REST_PROBABILITY = 0.1
@@ -139,6 +140,7 @@ class KernGenerator:
         }
         
         self.used: Dict[str, Set[Union[str, bool]]] = {}
+        self.generated_measures: int = 0
         self.reset_tracking()
         
         self.in_beam = False
@@ -156,6 +158,7 @@ class KernGenerator:
         
         self.used["beams"].add("")
         self.used["glissandi"].add("")
+        self.generated_measures = 0
 
     def reset_state(self) -> None:
         """Resets the state of open contexts (ties, slurs, beams, etc.) for a new generation flow."""
@@ -541,7 +544,12 @@ class KernGenerator:
         lines.append(final_barline)
         
         lines.append("*-")
-        
+
+        # Conditionally reset tracking
+        self.generated_measures += num_measures
+        if self.generated_measures >= self.RESET_TRACKING_AFTER_N_GENERATED_MEASURES_AND_METHOD_COMPLETION and not self.check_coverage():
+            self.reset_tracking()
+
         if return_list:
             return lines
         return "\n".join(lines)
@@ -576,8 +584,10 @@ def _run_tests() -> None:
     
     # Test 2: Complete exhaustive vocabulary coverage.
     gen.reset_tracking()
-    for _ in range(200):
-        gen.generate(num_measures=20)
+    num_measures_per_staff = 20
+    num_staffs = gen.RESET_TRACKING_AFTER_N_GENERATED_MEASURES_AND_METHOD_COMPLETION // num_measures_per_staff
+    for _ in range(num_staffs - 1):
+        gen.generate(num_measures=num_measures_per_staff)
         
     missing = gen.check_coverage()
     if missing:
@@ -655,3 +665,6 @@ def _run_tests() -> None:
 if __name__ == "__main__":
     _run_tests()
     gen = KernGenerator()
+    for _ in range(50):
+        gen.generate(num_measures=10)
+    print(gen.generate(num_measures=10))
