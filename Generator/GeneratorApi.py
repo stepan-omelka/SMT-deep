@@ -1,12 +1,12 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 from Generator.Utils.KernToPng import KernToPng
 from Generator.Utils.KernGenerator import KernGenerator
 from Generator.Utils.KernAnnotationParser import convert_kern_to_annotated
 
 class Generator:
-    def __init__(self):
-        self.kg = KernGenerator()
+    def __init__(self, seed: Optional[int] = None) -> None:
+        self.kg = KernGenerator() if seed is None else KernGenerator(seed)
         self.kern_2_png = KernToPng()
 
     def generateStaff(self) -> Tuple[str, str]:

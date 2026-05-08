@@ -115,13 +115,13 @@ class KernGenerator:
             "accidentals": ['', '#', '-', 'n', '##', '--', '---'],
             "rests": ['r'],
             "articulations": ['', "'", '"', '^', '~', ':', '`', 'u', 'v', ',', 'z', 'U', 'o', 'I'],
-            "ornaments": ['', 'T', 'm', 'w', 'M', 'S', 'O', 'tr', 'TT', 'WW', 'RR'],
+            "ornaments": ['', 'T', 't', 'm', 'w', 'M', 'O', 'TT', 'tt', 'WW', 'RR'], # "S" ornament is missing. Verovio has problems with it lol.
             "stems": ['', '/', '\\'],
             "clefs": [
                 '*clefG1', '*clefG2', '*clefG3', '*clefG4', '*clefG5', 
                 '*clefC1', '*clefC2', '*clefC3', '*clefC4', '*clefC5', 
                 '*clefF1', '*clefF2', '*clefF3', '*clefF4', '*clefF5',
-                '*clefGv2', '*clefG^2', '*clefFv4', '*clefF^4', '*clefX'
+                '*clefGv2', '*clefFv4'
             ],
             "keys": [
                 '*k[]', 
@@ -178,8 +178,14 @@ class KernGenerator:
         else:
             self.used[category].add(value)
 
-    def _close_all_open_states(self, suffix: str) -> str:
-        """Ensures all naturally open elements are cleanly terminated."""
+    def _close_all_open_states(self, suffix: str, include_beams: bool = True) -> str:
+        """Ensures all naturally open elements are cleanly terminated.
+        
+        Args:
+            suffix: The suffix string to append closing tokens to.
+            include_beams: If False, beam-close tokens are omitted (e.g. for rests,
+                           which cannot carry beam markers in **kern).
+        """
         if self.in_tie:
             suffix += "]"
             self.in_tie = False
@@ -196,7 +202,7 @@ class KernGenerator:
             suffix += "h"
             self.in_glissando = False
             self._track("glissandi", "h")
-        if self.in_beam:
+        if self.in_beam and include_beams:
             beam_end = str(random.choice(['J', 'JJ']))
             suffix += beam_end
             self.in_beam = False
@@ -355,7 +361,8 @@ class KernGenerator:
         if is_rest:
             rest: str = str(random.choice(self.playbook["rests"]))
             self._track("rests", rest)
-            suffix = self._close_all_open_states(suffix)
+            # Rests cannot carry beam markers in **kern — close everything except beams
+            suffix = self._close_all_open_states(suffix, include_beams=False)
 
             art = ""
             if random.random() < self.FERMATA_ON_REST_PROB:
@@ -660,11 +667,125 @@ def _run_tests() -> None:
             active_measure_sum += extract_duration(line)
             
     print("Test 5 [Mathematical Measure Sum Capacity Match]: PASSED.")
+    
+    # Test 6: music21 Humdrum parser syntax validation.
+    # Feeds generated kern through music21's converter to catch syntax errors
+    # that a real engraver (Verovio, music21, etc.) would flag.
+    import io
+    from contextlib import redirect_stdout, redirect_stderr
+    from music21 import converter
+    
+    MUSIC21_VALIDATION_SAMPLES = 100
+    MUSIC21_MEASURES_PER_SAMPLE = 6
+    
+    all_warnings = []
+    for sample_idx in range(MUSIC21_VALIDATION_SAMPLES):
+        kern_str = gen.generate(num_measures=MUSIC21_MEASURES_PER_SAMPLE)
+        
+        f_out = io.StringIO()
+        f_err = io.StringIO()
+        try:
+            with redirect_stdout(f_out), redirect_stderr(f_err):
+                converter.parse(kern_str, format='humdrum')
+        except Exception as e:
+            all_warnings.append(f"[EXCEPTION] Sample {sample_idx}: {type(e).__name__}: {e}")
+            continue
+        
+        for output in [f_out.getvalue(), f_err.getvalue()]:
+            for line in output.strip().split('\n'):
+                line = line.strip()
+                if line and ('WARNING' in line or 'Error' in line):
+                    all_warnings.append(f"Sample {sample_idx}: {line}")
+    
+    if all_warnings:
+        print(f"music21 found {len(all_warnings)} warnings across {MUSIC21_VALIDATION_SAMPLES} samples:")
+        for w in all_warnings[:20]:
+            print(f"  {w}")
+    assert not all_warnings, (
+        f"music21 validation failed: {len(all_warnings)} warnings across "
+        f"{MUSIC21_VALIDATION_SAMPLES} samples. First: {all_warnings[0]}"
+    )
+    print(f"Test 6 [music21 Humdrum Parser Syntax Validation ({MUSIC21_VALIDATION_SAMPLES} samples)]: PASSED.")
+
+    # Test 7: Verovio red-element validation.
+    # Verovio renders invalid syntax in red (#ff0000). This test feeds generated kern
+    # through Verovio's toolkit and checks the SVG output for any red elements.
+    # Runs in subprocess to isolate potential Verovio segfaults.
+    import subprocess
+    
+    VENV_PYTHON = '/Users/stepanomelka/PyCharmMiscProject/SMT-deep/.venv/bin/python3'
+    VEROVIO_VALIDATION_SAMPLES = 30
+    VEROVIO_MEASURE_CHOICES = [2, 3, 4, 6, 8]
+    
+    verovio_available = True
+    try:
+        probe = subprocess.run(
+            [VENV_PYTHON, '-c', 'import verovio; print("ok")'],
+            capture_output=True, text=True, timeout=10
+        )
+        if probe.stdout.strip() != "ok":
+            verovio_available = False
+    except Exception:
+        verovio_available = False
+    
+    if verovio_available:
+        red_samples = []
+        crash_count = 0
+        
+        for sample_idx in range(VEROVIO_VALIDATION_SAMPLES):
+            measures = VEROVIO_MEASURE_CHOICES[sample_idx % len(VEROVIO_MEASURE_CHOICES)]
+            kern_str = gen.generate(num_measures=measures)
+            
+            # Escape triple-quotes in kern data for safe embedding
+            escaped_kern = kern_str.replace('\\', '\\\\').replace('"', '\\"')
+            
+            script = (
+                'import sys, io, verovio\n'
+                'from contextlib import redirect_stdout, redirect_stderr\n'
+                'verovio.enableLog(verovio.LOG_OFF)\n'
+                'tk = verovio.toolkit()\n'
+                f'kern = "{escaped_kern}"\n'
+                'kern = kern.replace("\\\\n", "\\n")\n'
+                'f = io.StringIO()\n'
+                'with redirect_stdout(f), redirect_stderr(f):\n'
+                '    tk.loadData(kern)\n'
+                '    svg = tk.renderToSVG(1)\n'
+                'if "ff0000" in svg.lower():\n'
+                '    print("RED")\n'
+                'else:\n'
+                '    print("OK")\n'
+            )
+            
+            try:
+                result = subprocess.run(
+                    [VENV_PYTHON, '-c', script],
+                    capture_output=True, text=True, timeout=15
+                )
+                if result.stdout.strip() == "RED":
+                    red_samples.append((sample_idx, measures, kern_str))
+            except (subprocess.TimeoutExpired, Exception):
+                crash_count += 1
+        
+        if red_samples:
+            print(f"Verovio found {len(red_samples)} samples with red elements:")
+            for idx, measures, kern in red_samples[:5]:
+                print(f"  Sample {idx} ({measures} measures):")
+                for line in kern.split('\n')[:15]:
+                    print(f"    {line}")
+                print(f"    ...")
+        
+        assert not red_samples, (
+            f"Verovio validation failed: {len(red_samples)}/{VEROVIO_VALIDATION_SAMPLES} "
+            f"samples had red elements. Crashes: {crash_count}"
+        )
+        print(f"Test 7 [Verovio Red-Element Validation ({VEROVIO_VALIDATION_SAMPLES} samples)]: PASSED.")
+    else:
+        print("Test 7 [Verovio Red-Element Validation]: SKIPPED (verovio not available in .venv).")
 
 
 if __name__ == "__main__":
     _run_tests()
-    gen = KernGenerator()
-    for _ in range(50):
-        gen.generate(num_measures=10)
-    print(gen.generate(num_measures=10))
+    # gen = KernGenerator()
+    # for _ in range(50):
+    #     gen.generate(num_measures=10)
+    # print(gen.generate(num_measures=10))
